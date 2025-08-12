@@ -14,6 +14,13 @@ matplotlib
 seaborn
 plotly
 scipy
+statsmodels
+
+# Deep Learning libraries
+tensorflow>=2.8.0
+keras>=2.8.0
+torch>=1.12.0
+torchvision>=0.13.0
 
 # Web scraping and data collection
 requests
@@ -27,6 +34,20 @@ html5lib
 sqlalchemy
 openpyxl
 xlrd
+
+# Specialized ML libraries
+xgboost>=1.6.0
+lightgbm>=3.3.0
+catboost>=1.0.0
+imbalanced-learn>=0.9.0
+
+# Association rule mining
+mlxtend>=0.20.0
+apyori>=1.1.2
+
+# Reinforcement learning
+gym>=0.21.0
+stable-baselines3>=1.6.0
 
 # Additional utilities for notebooks
 tqdm

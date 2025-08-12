@@ -6,14 +6,42 @@ chapters:
 - file: notebooks/01_data_collection
   title: "Chapter 1: Data Collection and Web Scraping"
 - file: notebooks/02_linear_regression
-  title: "Chapter 2: Linear Regression"
+  title: "Chapter 2: Linear Regression with Real Estate Data"
 - file: notebooks/03_logistic_regression
   title: "Chapter 3: Logistic Regression"
 - file: notebooks/04_decision_trees
   title: "Chapter 4: Decision Trees"
 - file: notebooks/05_random_forest
-  title: "Chapter 5: Random Forests"
+  title: "Chapter 5: Random Forest"
 - file: notebooks/06_support_vector_machines
   title: "Chapter 6: Support Vector Machines"
 - file: notebooks/07_neural_networks
   title: "Chapter 7: Neural Networks"
+- file: notebooks/08_k_means_clustering
+  title: "Chapter 8: K-Means Clustering"
+- file: notebooks/09_hierarchical_clustering
+  title: "Chapter 9: Hierarchical Clustering"
+- file: notebooks/10_principal_component_analysis
+  title: "Chapter 10: Principal Component Analysis (PCA)"
+- file: notebooks/11_naive_bayes
+  title: "Chapter 11: Naive Bayes Classification"
+- file: notebooks/12_k_nearest_neighbors
+  title: "Chapter 12: K-Nearest Neighbors (KNN)"
+- file: notebooks/13_gradient_boosting
+  title: "Chapter 13: Gradient Boosting Machines"
+- file: notebooks/14_association_rule_mining
+  title: "Chapter 14: Association Rule Mining"
+- file: notebooks/15_dbscan_clustering
+  title: "Chapter 15: DBSCAN Clustering"
+- file: notebooks/16_linear_discriminant_analysis
+  title: "Chapter 16: Linear Discriminant Analysis (LDA)"
+- file: notebooks/17_gaussian_mixture_models
+  title: "Chapter 17: Gaussian Mixture Models (GMM)"
+- file: notebooks/18_adaboost
+  title: "Chapter 18: AdaBoost (Adaptive Boosting)"
+- file: notebooks/19_q_learning
+  title: "Chapter 19: Q-Learning (Reinforcement Learning)"
+- file: notebooks/20_autoencoders
+  title: "Chapter 20: Autoencoders (Deep Learning)"
+- file: notebooks/21_convolutional_neural_networks
+  title: "Chapter 21: Convolutional Neural Networks (CNN)"
