@@ -122,15 +122,49 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Data files
+# Data files and datasets
+data/
 *.csv
 *.json
 *.xlsx
+*.xls
 *.parquet
 *.h5
 *.hdf5
+*.pkl
+*.pickle
+*.feather
+*.arrow
+*.sqlite
+*.db
+*.sql
 
-# Model files
+# Keep directory structure but ignore data files
+!data/README.md
+!data/**/.gitkeep
+
+# Raw scraped data
+scraped_data/
+raw_data/
+external_data/
+
+# Processed data outputs
+processed/
+cleaned/
+features/
+outputs/
+
+# Large files
+*.zip
+*.tar.gz
+*.tar
+*.rar
+*.7z
+
+# Model files and artifacts
+models/
+saved_models/
+checkpoints/
 *.pkl
 *.joblib
 *.model
@@ -138,6 +172,40 @@ dmypy.json
 *.pb
 *.ckpt
 *.pth
+*.pt
+*.onnx
+
+# Machine learning experiment tracking
+mlruns/
+mlflow.db
+wandb/
+tensorboard_logs/
+experiments/
+
+# Data processing temporary files
+cache/
+tmp/
+temp/
+.cache/
+
+# Jupyter Book build files
+_build/
+.jupyter_cache/
+
+# API keys and secrets
+.env
+.env.local
+.env.*.local
+config.ini
+secrets.json
+api_keys.txt
+credentials.json
+
+# Web scraping related
+selenium_logs/
+chromedriver.log
+geckodriver.log
+browser_cache/
 
 # Logs
 logs/

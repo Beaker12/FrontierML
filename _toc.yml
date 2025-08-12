@@ -1,0 +1,19 @@
+format: jb-book
+root: intro
+chapters:
+- file: notebooks/00_index
+  title: "Course Overview"
+- file: notebooks/01_data_collection
+  title: "Chapter 1: Data Collection and Web Scraping"
+- file: notebooks/02_linear_regression
+  title: "Chapter 2: Linear Regression"
+- file: notebooks/03_logistic_regression
+  title: "Chapter 3: Logistic Regression"
+- file: notebooks/04_decision_trees
+  title: "Chapter 4: Decision Trees"
+- file: notebooks/05_random_forest
+  title: "Chapter 5: Random Forests"
+- file: notebooks/06_support_vector_machines
+  title: "Chapter 6: Support Vector Machines"
+- file: notebooks/07_neural_networks
+  title: "Chapter 7: Neural Networks"

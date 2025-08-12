@@ -1,0 +1,75 @@
+# Book settings
+title: "FrontierML: Machine Learning with Real-World Data"
+author: "Stuart W. Parkhurst"
+logo: "data/images/FrontierMLlogo.png"
+
+# Force re-execution of notebooks on each build
+execute:
+  execute_notebooks: cache
+  timeout: 1000
+  stderr_output: show
+
+# Define the left-hand table of contents
+format: jb-book
+root: intro
+chapters:
+- file: notebooks/00_index
+- file: notebooks/01_data_collection
+- file: notebooks/02_linear_regression
+- file: notebooks/03_logistic_regression
+- file: notebooks/04_decision_trees
+- file: notebooks/05_random_forest
+- file: notebooks/06_support_vector_machines
+- file: notebooks/07_neural_networks
+
+# Information about where the book exists on the web
+repository:
+  url: https://github.com/Beaker12/FrontierML
+  path_to_book: ""
+  branch: master
+
+# HTML-specific settings
+html:
+  favicon: "data/images/favicon.ico"
+  use_edit_page_button: true
+  use_repository_button: true
+  use_issues_button: true
+  extra_navbar: ""
+  extra_footer: |
+    <div>
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/"><img src="https://licensebuttons.net/l/by-nc-sa/3.0/88x31.png"></a>
+        All content on this site (unless otherwise specified) is licensed under the <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC-BY-NC-SA 4.0 license</a>
+    </div>
+
+# LaTeX settings
+latex:
+  latex_engine: pdflatex
+  use_jupyterbook_latex: true
+  latex_documents:
+    targetname: book.tex
+
+# Advanced and extension settings
+sphinx:
+  config:
+    html_theme_options:
+      repository_url: https://github.com/Beaker12/FrontierML
+      use_repository_button: true
+      use_edit_page_button: true
+      use_source_button: true
+      use_issues_button: true
+      use_repository_button: true
+      use_download_button: true
+      path_to_docs: ""
+      repository_branch: main
+      launch_buttons:
+        notebook_interface: "jupyterlab"
+        binderhub_url: "https://mybinder.org"
+        colab_url: "https://colab.research.google.com"
+    html_js_files:
+    - https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js
+  extra_extensions:
+    - sphinxcontrib.bibtex
+
+# Bibliography settings
+bibtex_bibfiles:
+  - references.bib
