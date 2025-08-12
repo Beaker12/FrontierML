@@ -1,0 +1,107 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "frontierml"
+version = "0.1.0"
+description = "AI/ML Practice Problems with End-to-End Implementation"
+readme = "README.md"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+keywords = ["machine-learning", "artificial-intelligence", "data-science", "jupyter", "notebooks"]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.21.0",
+    "pandas>=1.3.0",
+    "scikit-learn>=1.0.0",
+    "matplotlib>=3.4.0",
+    "seaborn>=0.11.0",
+    "jupyter>=1.0.0",
+    "jupyterlab>=3.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.2.0",
+    "pytest-cov>=2.12.0",
+    "black>=22.0.0",
+    "flake8>=4.0.0",
+    "mypy>=0.910",
+]
+deep-learning = [
+    "tensorflow>=2.8.0",
+    "torch>=1.11.0",
+    "torchvision>=0.12.0",
+]
+nlp = [
+    "nltk>=3.6.0",
+    "spacy>=3.4.0",
+    "transformers>=4.20.0",
+    "gensim>=4.2.0",
+]
+computer-vision = [
+    "opencv-python>=4.5.0",
+    "imageio>=2.9.0",
+    "pillow>=8.3.0",
+]
+reinforcement-learning = [
+    "gym>=0.21.0",
+    "stable-baselines3>=1.6.0",
+]
+mlops = [
+    "mlflow>=1.28.0",
+    "wandb>=0.12.0",
+    "optuna>=2.10.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/FrontierML"
+Documentation = "https://github.com/yourusername/FrontierML/docs"
+Repository = "https://github.com/yourusername/FrontierML"
+Issues = "https://github.com/yourusername/FrontierML/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
