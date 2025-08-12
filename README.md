@@ -1,94 +1,123 @@
-# FrontierML: AI/ML Practice Problems
+# FrontierML: Machine Learning with Real-World Data
 
-A comprehensive collection of end-to-end AI/ML practice problems implemented in Python using Jupyter notebooks.
+An interactive **Jupyter Book** that teaches machine learning concepts through hands-on implementation with real-world data collection and analysis.
 
-## Project Structure
+## Overview
+
+This book provides a comprehensive introduction to machine learning algorithms, combining theoretical understanding with practical implementation. What sets this book apart is its emphasis on:
+
+- **Real-world data collection** through web scraping and APIs
+- **Step-by-step mathematical explanations** with proper citations
+- **Interactive code examples** that you can run and modify
+- **Comprehensive visualizations** to understand algorithm behavior
+- **Best practices** for data science workflows
+
+## Repository Structure
 
 ```
 FrontierML/
-├── notebooks/          # Individual practice notebooks for 20 major AI/ML problems
-├── data/              # Datasets and test data
-├── src/               # Utility functions and helper modules
-├── tests/             # Unit tests for utility functions
-├── docs/              # Documentation
-├── requirements.txt   # Python dependencies
-├── Makefile          # Environment setup and common tasks
-├── pyproject.toml    # Package configuration
-└── .gitignore        # Git ignore rules
+├── notebooks/          # Interactive Jupyter Book chapters
+│   ├── 00_index.ipynb          # Course overview
+│   ├── 01_data_collection.ipynb # Data collection and scraping
+│   ├── 02_linear_regression.ipynb # Linear regression
+│   └── ...                     # Additional ML topics
+├── data/               # Datasets used in notebooks
+├── utils/              # Utility functions for notebooks
+│   ├── scraping_utils.py       # Web scraping utilities
+│   ├── data_utils.py           # Data processing utilities
+│   ├── evaluation_utils.py     # Model evaluation utilities
+│   └── plot_utils.py           # Visualization utilities
+├── docs/               # Additional documentation
+├── tests/              # Basic functionality tests
+├── _config.yml         # Jupyter Book configuration
+├── _toc.yml           # Table of contents
+├── intro.md           # Book introduction
+└── requirements.txt    # Dependencies including jupyter-book
 ```
 
 ## Getting Started
 
-### Prerequisites
-- Python 3.8+
-- Git
+### Option 1: Interactive Jupyter Book (Recommended)
 
-### Setup
+1. Clone this repository:
 
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd FrontierML
-```
+   ```bash
+   git clone <repository-url>
+   cd FrontierML
+   ```
 
-2. Set up the environment:
-```bash
-make setup
-```
+2. Install dependencies:
 
-3. Activate the virtual environment:
-```bash
-source venv/bin/activate  # Linux/Mac
-# or
-venv\Scripts\activate     # Windows
-```
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-4. Start Jupyter Lab:
-```bash
-make jupyter
-```
+3. Build the Jupyter Book:
 
-## Practice Problems
+   ```bash
+   make book
+   ```
 
-This project includes 20 major AI/ML practice problems:
+4. Open `_build/html/index.html` in your browser
 
-1. **Linear Regression** - House price prediction
-2. **Logistic Regression** - Binary classification
-3. **Decision Trees** - Feature importance analysis
-4. **Random Forest** - Ensemble learning
-5. **Support Vector Machines** - Non-linear classification
-6. **K-Means Clustering** - Customer segmentation
-7. **Hierarchical Clustering** - Dendrogram analysis
-8. **Principal Component Analysis** - Dimensionality reduction
-9. **Neural Networks** - Multi-layer perceptron
-10. **Convolutional Neural Networks** - Image classification
-11. **Recurrent Neural Networks** - Time series prediction
-12. **LSTM Networks** - Sequential data modeling
-13. **Autoencoders** - Anomaly detection
-14. **Generative Adversarial Networks** - Data generation
-15. **Natural Language Processing** - Text classification
-16. **Recommendation Systems** - Collaborative filtering
-17. **Reinforcement Learning** - Q-learning
-18. **Time Series Forecasting** - ARIMA models
-19. **Transfer Learning** - Pre-trained models
-20. **Model Deployment** - MLOps pipeline
+### Option 2: Individual Notebooks
 
-Each notebook includes:
-- Detailed problem description
-- Data exploration and visualization
-- Feature engineering
-- Model implementation
-- Evaluation metrics
-- Comprehensive comments and explanations
+1. Start Jupyter Lab:
+
+   ```bash
+   make jupyter
+   ```
+
+2. Navigate to the `notebooks/` directory and open individual chapters
+
+## Book Contents
+
+### Chapter 1: Data Collection and Web Scraping
+- Web scraping fundamentals and ethics
+- API interactions for real-world data
+- Data quality assessment and preprocessing
+- Feature engineering techniques
+
+### Chapter 2: Linear Regression
+- Mathematical foundations and derivations
+- Implementation from scratch
+- Real-world applications with financial data
+- Model evaluation and interpretation
+
+### Chapter 3: Logistic Regression
+- Theory of classification algorithms
+- Maximum likelihood estimation
+- Practical implementation and evaluation
+- Handling imbalanced datasets
+
+### Chapter 4: Decision Trees
+- Information theory and entropy
+- Tree construction algorithms
+- Overfitting and pruning techniques
+- Feature importance analysis
+
+### Chapter 5: Random Forests
+- Ensemble learning principles
+- Bootstrap aggregating (bagging)
+- Out-of-bag error estimation
+- Hyperparameter tuning
+
+### Chapter 6: Support Vector Machines
+- Geometric interpretation and margin maximization
+- Kernel methods and the kernel trick
+- Handling non-linearly separable data
+- Multi-class classification strategies
+
+### Chapter 7: Neural Networks
+- Perceptron and multi-layer networks
+- Backpropagation algorithm
+- Activation functions and optimization
+- Practical deep learning considerations
 
 ## Contributing
 
-Please follow the coding standards outlined in the project guidelines:
-- Use snake_case for variable names
-- Include type hints for all functions
-- Write comprehensive docstrings
-- Follow PEP 8 conventions
+This is an educational repository. Please ensure all contributions maintain clarity and educational value.
 
 ## License
 
-MIT License - see LICENSE file for details.
+See LICENSE file for details.

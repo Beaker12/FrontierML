@@ -1,42 +1,36 @@
-.PHONY: help setup clean jupyter test lint format install-dev
+.PHONY: install clean test jupyter build book serve
+
+install:
+	pip install -r requirements.txt
+
+clean:
+	find . -type f -name "*.pyc" -delete
+	find . -type d -name "__pycache__" -delete
+	find . -type d -name ".ipynb_checkpoints" -exec rm -rf {} +
+	rm -rf _build/
+
+test:
+	python -m pytest tests/ -v
+
+jupyter:
+	jupyter notebook notebooks/
+
+build:
+	jupyter-book build .
+
+book: build
+	@echo "Jupyter Book built successfully!"
+	@echo "Open _build/html/index.html in your browser"
+
+serve:
+	python -m http.server 8000 --directory _build/html
 
 help:
 	@echo "Available commands:"
-	@echo "  setup      - Create virtual environment and install dependencies"
-	@echo "  clean      - Remove virtual environment and cache files"
-	@echo "  jupyter    - Start Jupyter Lab"
-	@echo "  test       - Run tests"
-	@echo "  lint       - Run linting"
-	@echo "  format     - Format code with black"
-	@echo "  install-dev - Install development dependencies"
-
-setup:
-	python -m venv venv
-	./venv/Scripts/pip install --upgrade pip
-	./venv/Scripts/pip install -r requirements.txt
-	@echo "Virtual environment created. Activate with: venv\\Scripts\\activate"
-
-clean:
-	rm -rf venv/
-	rm -rf __pycache__/
-	rm -rf .pytest_cache/
-	rm -rf *.egg-info/
-	find . -name "*.pyc" -delete
-	find . -name "*.pyo" -delete
-
-jupyter:
-	jupyter lab --notebook-dir=notebooks
-
-test:
-	python -m pytest tests/ -v --cov=src/
-
-lint:
-	flake8 src/ tests/
-	mypy src/
-
-format:
-	black src/ tests/
-	black notebooks/*.ipynb --target-version py38
-
-install-dev:
-	pip install -e .
+	@echo "  install  - Install dependencies"
+	@echo "  clean    - Remove cache files and checkpoints"
+	@echo "  test     - Run tests"
+	@echo "  jupyter  - Start Jupyter notebook server"
+	@echo "  build    - Build Jupyter Book"
+	@echo "  book     - Build and show instructions"
+	@echo "  serve    - Serve the built book locally"
