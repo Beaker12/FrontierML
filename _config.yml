@@ -9,6 +9,7 @@ execute:
   execute_notebooks: cache
   timeout: 1000
   stderr_output: show
+  allow_errors: false
 
 # Exclude patterns for files that shouldn't be in the book
 exclude_patterns:
@@ -59,6 +60,10 @@ sphinx:
     bibtex_bibfiles:
       - references.bib
     bibtex_reference_style: author_year
+    # Configuration for matplotlib plots in notebooks
+    nb_execution_mode: 'cache'
+    nb_execution_timeout: 1000
+    nb_execution_allow_errors: false
     html_theme_options:
       repository_url: https://github.com/Beaker12/FrontierML
       use_repository_button: true
