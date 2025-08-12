@@ -179,3 +179,129 @@ def check_data_quality(df: pd.DataFrame) -> dict:
     }
     
     return quality_report
+
+
+def save_data(data: Union[pd.DataFrame, dict], filepath: str, format: str = 'csv') -> str:
+    """
+    Save data in specified format.
+    
+    Parameters
+    ----------
+    data : pd.DataFrame or dict
+        Data to save
+    filepath : str
+        Path to save the file
+    format : str, default='csv'
+        Format to save ('csv', 'json', 'parquet', 'pickle')
+        
+    Returns
+    -------
+    str
+        Path where the file was saved
+        
+    Raises
+    ------
+    ValueError
+        If format is not supported or data type is incompatible
+    """
+    import os
+    import json
+    
+    # Create directory if it doesn't exist
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    
+    if format == 'csv':
+        if isinstance(data, pd.DataFrame):
+            data.to_csv(filepath, index=False)
+        else:
+            raise ValueError("CSV format requires DataFrame input")
+            
+    elif format == 'json':
+        if isinstance(data, pd.DataFrame):
+            data.to_json(filepath, orient='records', date_format='iso')
+        elif isinstance(data, dict):
+            with open(filepath, 'w') as f:
+                json.dump(data, f, indent=2, default=str)
+        else:
+            raise ValueError("JSON format requires DataFrame or dict input")
+            
+    elif format == 'parquet':
+        if isinstance(data, pd.DataFrame):
+            data.to_parquet(filepath, index=False)
+        else:
+            raise ValueError("Parquet format requires DataFrame input")
+            
+    elif format == 'pickle':
+        import pickle
+        with open(filepath, 'wb') as f:
+            pickle.dump(data, f)
+            
+    else:
+        raise ValueError(f"Unsupported format: {format}. "
+                        f"Supported formats: csv, json, parquet, pickle")
+    
+    logger.info(f"Data saved to: {filepath}")
+    return filepath
+
+
+def load_data(filepath: str, format: str = None) -> Union[pd.DataFrame, dict]:
+    """
+    Load data from file, auto-detecting format if not specified.
+    
+    Parameters
+    ----------
+    filepath : str
+        Path to the file to load
+    format : str, optional
+        Format of the file ('csv', 'json', 'parquet', 'pickle')
+        If None, will be inferred from file extension
+        
+    Returns
+    -------
+    pd.DataFrame or dict
+        Loaded data
+        
+    Raises
+    ------
+    ValueError
+        If format is not supported
+    FileNotFoundError
+        If file doesn't exist
+    """
+    import os
+    
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"File not found: {filepath}")
+    
+    # Auto-detect format from extension if not provided
+    if format is None:
+        ext = os.path.splitext(filepath)[1].lower()
+        format_map = {
+            '.csv': 'csv',
+            '.json': 'json',
+            '.parquet': 'parquet',
+            '.pkl': 'pickle',
+            '.pickle': 'pickle'
+        }
+        format = format_map.get(ext)
+        if format is None:
+            raise ValueError(f"Cannot infer format from extension: {ext}")
+    
+    if format == 'csv':
+        return pd.read_csv(filepath)
+    elif format == 'json':
+        try:
+            return pd.read_json(filepath, orient='records')
+        except ValueError:
+            # Try loading as dict if pandas fails
+            import json
+            with open(filepath, 'r') as f:
+                return json.load(f)
+    elif format == 'parquet':
+        return pd.read_parquet(filepath)
+    elif format == 'pickle':
+        import pickle
+        with open(filepath, 'rb') as f:
+            return pickle.load(f)
+    else:
+        raise ValueError(f"Unsupported format: {format}")

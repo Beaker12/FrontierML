@@ -1,6 +1,7 @@
 # Book settings
 title: "FrontierML: Machine Learning with Real-World Data"
 author: "Stuart W. Parkhurst"
+copyright: "2025"
 logo: "data/images/FrontierMLlogo.png"
 
 # Force re-execution of notebooks on each build
@@ -9,18 +10,22 @@ execute:
   timeout: 1000
   stderr_output: show
 
+# Exclude patterns for files that shouldn't be in the book
+exclude_patterns:
+  - .github/**
+  - data/README.md
+  - docs/README.md
+  - README.md
+  - tests/**
+  - utils/**
+  - "*.py"
+  - "**/.DS_Store"
+  - LICENSE
+  - Makefile
+  - requirements.txt
+
 # Define the left-hand table of contents
 format: jb-book
-root: intro
-chapters:
-- file: notebooks/00_index
-- file: notebooks/01_data_collection
-- file: notebooks/02_linear_regression
-- file: notebooks/03_logistic_regression
-- file: notebooks/04_decision_trees
-- file: notebooks/05_random_forest
-- file: notebooks/06_support_vector_machines
-- file: notebooks/07_neural_networks
 
 # Information about where the book exists on the web
 repository:
@@ -51,6 +56,9 @@ latex:
 # Advanced and extension settings
 sphinx:
   config:
+    bibtex_bibfiles:
+      - references.bib
+    bibtex_reference_style: author_year
     html_theme_options:
       repository_url: https://github.com/Beaker12/FrontierML
       use_repository_button: true
@@ -69,7 +77,3 @@ sphinx:
     - https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js
   extra_extensions:
     - sphinxcontrib.bibtex
-
-# Bibliography settings
-bibtex_bibfiles:
-  - references.bib
