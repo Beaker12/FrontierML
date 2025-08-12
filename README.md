@@ -298,7 +298,7 @@ We welcome contributions that enhance the educational value of this course! Plea
 ### **How to Contribute**
 
 1. **Fork the repository** and create a feature branch
-2. **Follow coding standards** outlined in `.github/instructions/master.instructions.md`
+2. **Follow coding standards** 
 3. **Add comprehensive tests** for any new functionality
 4. **Update documentation** and citations as needed
 5. **Submit a pull request** with detailed description
