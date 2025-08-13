@@ -2,6 +2,13 @@
 
 This module provides common evaluation metrics and model assessment
 utilities used across multiple notebooks.
+
+References:
+    - Pedregosa et al. (2011). Scikit-learn: Machine learning in Python. 
+      Journal of Machine Learning Research, 12(Oct), 2825-2857.
+    - Powers, D. M. (2011). Evaluation: from precision, recall and F-measure 
+      to ROC, informedness, markedness and correlation. Journal of Machine 
+      Learning Technologies, 2(1), 37-63.
 """
 
 import numpy as np
@@ -20,19 +27,46 @@ def evaluate_classification_model(
 ) -> Dict[str, Union[float, np.ndarray]]:
     """Comprehensive evaluation of classification models.
     
+    Computes standard classification metrics including accuracy, precision,
+    recall, F1-score, confusion matrix, and ROC-AUC as recommended by
+    Powers (2011) for comprehensive model evaluation.
+    
     Args:
-        y_true: True labels
-        y_pred: Predicted labels
-        y_pred_proba: Predicted probabilities (optional)
-        class_names: Names of classes (optional)
+        y_true: True labels as numpy array
+        y_pred: Predicted labels as numpy array  
+        y_pred_proba: Predicted probabilities (optional, for ROC-AUC)
+        class_names: Names of classes (optional, for reporting)
         
     Returns:
-        Dictionary containing various evaluation metrics
+        Dictionary containing evaluation metrics:
+        - accuracy: Overall accuracy score
+        - precision: Weighted average precision
+        - recall: Weighted average recall
+        - f1_score: Weighted average F1-score
+        - confusion_matrix: Confusion matrix as numpy array
+        - classification_report: Detailed per-class metrics
+        - roc_auc: ROC-AUC score (if probabilities provided)
+        
+    Raises:
+        ValueError: If array shapes don't match or invalid inputs
+        
+    References:
+        Powers, D. M. (2011). Evaluation: from precision, recall and F-measure 
+        to ROC, informedness, markedness and correlation. Journal of Machine 
+        Learning Technologies, 2(1), 37-63.
     """
     from sklearn.metrics import (
         accuracy_score, precision_score, recall_score, f1_score,
         classification_report, confusion_matrix, roc_auc_score
     )
+    
+    # Input validation
+    if len(y_true) != len(y_pred):
+        raise ValueError(f"y_true and y_pred must have same length: {len(y_true)} vs {len(y_pred)}")
+    if y_pred_proba is not None and len(y_true) != len(y_pred_proba):
+        raise ValueError(f"y_true and y_pred_proba must have same length: {len(y_true)} vs {len(y_pred_proba)}")
+    
+    logger.info(f"Evaluating classification model with {len(y_true)} samples")
     
     metrics = {}
     

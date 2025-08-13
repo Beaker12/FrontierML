@@ -1,9 +1,21 @@
-"""Basic tests for the FrontierML utility functions."""
+"""Basic tests for the FrontierML utility functions.
+
+This module contains basic functionality tests to ensure all core components
+are working correctly.
+
+References:
+    - pytest documentation: https://docs.pytest.org/
+"""
 
 import pytest
 import numpy as np
 import pandas as pd
+import logging
 from typing import Tuple
+
+# Configure logging for tests
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def test_import_basic_libraries():
@@ -14,6 +26,7 @@ def test_import_basic_libraries():
         import matplotlib.pyplot as plt
         import seaborn as sns
         import sklearn
+        logger.info("All basic libraries imported successfully")
         assert True
     except ImportError as e:
         pytest.fail(f"Failed to import basic libraries: {e}")
