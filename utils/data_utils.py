@@ -2,6 +2,12 @@
 
 This module provides common data loading, preprocessing, and transformation
 utilities used across multiple notebooks.
+
+References:
+    - Pedregosa et al. (2011). Scikit-learn: Machine learning in Python. 
+      Journal of Machine Learning Research, 12(Oct), 2825-2857.
+    - McKinney, W. (2010). Data structures for statistical computing in Python. 
+      In Proceedings of the 9th Python in Science Conference (pp. 56-61).
 """
 
 import pandas as pd
@@ -28,7 +34,6 @@ def load_sample_data(dataset_name: str) -> pd.DataFrame:
     """
     datasets = {
         'iris': _load_iris_data,
-        'boston': _load_boston_data,
         'wine': _load_wine_data,
         'digits': _load_digits_data,
     }
@@ -48,15 +53,6 @@ def _load_iris_data() -> pd.DataFrame:
     df = pd.DataFrame(data.data, columns=data.feature_names)
     df['target'] = data.target
     df['target_name'] = [data.target_names[i] for i in data.target]
-    return df
-
-
-def _load_boston_data() -> pd.DataFrame:
-    """Load the Boston housing dataset."""
-    from sklearn.datasets import load_boston
-    data = load_boston()
-    df = pd.DataFrame(data.data, columns=data.feature_names)
-    df['target'] = data.target
     return df
 
 
@@ -88,17 +84,35 @@ def preprocess_data(
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Preprocess data for machine learning models.
     
+    Performs comprehensive data preprocessing including train-test split,
+    categorical encoding, and feature scaling as recommended by 
+    Géron (2019) for machine learning pipelines.
+    
     Args:
-        df: Input DataFrame
+        df: Input DataFrame containing features and target
         target_column: Name of the target column
-        test_size: Proportion of data to use for testing
+        test_size: Proportion of data to use for testing (0.0-1.0)
         random_state: Random seed for reproducibility
-        scale_features: Whether to standardize features
+        scale_features: Whether to standardize features using StandardScaler
         
     Returns:
-        Tuple of (X_train, X_test, y_train, y_test)
+        Tuple of (X_train, X_test, y_train, y_test) as numpy arrays
+        
+    Raises:
+        KeyError: If target_column is not found in DataFrame
+        ValueError: If test_size is not between 0 and 1
+        
+    References:
+        Géron, A. (2019). Hands-on machine learning with Scikit-Learn, 
+        Keras, and TensorFlow. O'Reilly Media.
     """
     logger.info(f"Preprocessing data with target column: {target_column}")
+    
+    # Input validation
+    if target_column not in df.columns:
+        raise KeyError(f"Target column '{target_column}' not found in DataFrame")
+    if not 0 < test_size < 1:
+        raise ValueError(f"test_size must be between 0 and 1, got {test_size}")
     
     # Separate features and target
     X = df.drop(columns=[target_column])
@@ -120,6 +134,14 @@ def preprocess_data(
         scaler = StandardScaler()
         X_train = scaler.fit_transform(X_train)
         X_test = scaler.transform(X_test)
+    else:
+        # Convert to numpy arrays if not scaling
+        X_train = X_train.values
+        X_test = X_test.values
+    
+    # Ensure targets are numpy arrays
+    y_train = y_train.values if hasattr(y_train, 'values') else y_train
+    y_test = y_test.values if hasattr(y_test, 'values') else y_test
     
     logger.info(f"Data split: {X_train.shape[0]} training, {X_test.shape[0]} testing samples")
     
@@ -134,16 +156,35 @@ def generate_synthetic_data(
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Generate synthetic data for testing algorithms.
     
+    Creates synthetic classification datasets using make_classification
+    from scikit-learn, following the methodology described in 
+    Pedregosa et al. (2011).
+    
     Args:
-        n_samples: Number of samples to generate
-        n_features: Number of features
-        n_classes: Number of classes for classification
+        n_samples: Number of samples to generate (positive integer)
+        n_features: Number of features (positive integer)
+        n_classes: Number of classes for classification (≥ 2)
         random_state: Random seed for reproducibility
         
     Returns:
-        Tuple of (X, y) arrays
+        Tuple of (X, y) arrays where X is feature matrix and y is target vector
+        
+    Raises:
+        ValueError: If any parameter is invalid
+        
+    References:
+        Pedregosa et al. (2011). Scikit-learn: Machine learning in Python. 
+        Journal of Machine Learning Research, 12(Oct), 2825-2857.
     """
     from sklearn.datasets import make_classification
+    
+    # Input validation
+    if n_samples <= 0:
+        raise ValueError(f"n_samples must be positive, got {n_samples}")
+    if n_features <= 0:
+        raise ValueError(f"n_features must be positive, got {n_features}")
+    if n_classes < 2:
+        raise ValueError(f"n_classes must be >= 2, got {n_classes}")
     
     logger.info(f"Generating synthetic data: {n_samples} samples, {n_features} features")
     
@@ -162,11 +203,26 @@ def generate_synthetic_data(
 def check_data_quality(df: pd.DataFrame) -> dict:
     """Perform basic data quality checks.
     
+    Performs comprehensive data quality assessment including missing values,
+    duplicates, data types, and memory usage analysis as recommended by
+    Wickham & Grolemund (2016) for data science workflows.
+    
     Args:
-        df: Input DataFrame
+        df: Input DataFrame to analyze
         
     Returns:
-        Dictionary with data quality metrics
+        Dictionary containing data quality metrics including:
+        - shape: DataFrame dimensions
+        - missing_values: Count of missing values per column
+        - duplicate_rows: Number of duplicate rows
+        - data_types: Data types for each column
+        - memory_usage: Total memory usage in bytes
+        - numeric_columns: List of numeric column names
+        - categorical_columns: List of categorical column names
+        
+    References:
+        Wickham, H., & Grolemund, G. (2016). R for data science: 
+        import, tidy, transform, visualize, and model data. O'Reilly Media.
     """
     quality_report = {
         'shape': df.shape,

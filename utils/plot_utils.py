@@ -4,6 +4,12 @@ This module provides common plotting and visualization functions
 used across multiple notebooks, with proper configuration for
 Jupyter Book display.
 
+References:
+    - Hunter, J. D. (2007). Matplotlib: A 2D graphics environment. 
+      Computing in Science & Engineering, 9(3), 90-95.
+    - Waskom, M. L. (2021). Seaborn: statistical data visualization. 
+      Journal of Open Source Software, 6(60), 3021.
+
 Author: Stuart W. Parkhurst
 Date: August 12, 2025
 """
@@ -47,8 +53,10 @@ def configure_plotting(style: str = 'default',
     Jupyter notebooks and Jupyter Book builds. It avoids the 'Agg'
     backend which prevents proper plot display in books.
     
-    Citation: Best practices for matplotlib in Jupyter environments
-    are documented in the matplotlib documentation (Hunter, 2007).
+    References
+    ----------
+    Hunter, J. D. (2007). Matplotlib: A 2D graphics environment. 
+    Computing in Science & Engineering, 9(3), 90-95.
     """
     # Configure matplotlib backend for Jupyter Book compatibility
     if inline:
@@ -592,6 +600,128 @@ def plot_time_series(
     
     # Format x-axis dates
     fig.autofmt_xdate()
+    
+    plt.tight_layout()
+    return fig
+
+
+def plot_decision_boundary(
+    X: np.ndarray,
+    y: np.ndarray,
+    model,
+    title: str = "Decision Boundary",
+    figsize: Tuple[int, int] = (8, 6),
+    mesh_step: float = 0.02,
+    alpha: float = 0.6
+) -> plt.Figure:
+    """Plot decision boundary for 2D classification problems.
+    
+    Parameters
+    ----------
+    X : np.ndarray
+        Feature matrix (must be 2D for visualization)
+    y : np.ndarray
+        Target labels
+    model : object
+        Trained model with predict_proba or predict method
+    title : str, default="Decision Boundary"
+        Plot title
+    figsize : tuple, default=(8, 6)
+        Figure size
+    mesh_step : float, default=0.02
+        Step size for mesh grid
+    alpha : float, default=0.6
+        Transparency for decision boundary
+    
+    Returns
+    -------
+    plt.Figure
+        matplotlib Figure object
+        
+    Notes
+    -----
+    Requires model to have either predict_proba or predict method.
+    For binary classification, uses predict_proba if available.
+    """
+    if X.shape[1] != 2:
+        raise ValueError("Decision boundary plotting requires 2D feature space")
+    
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    # Create mesh for decision boundary
+    x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
+    y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+    xx, yy = np.meshgrid(
+        np.arange(x_min, x_max, mesh_step),
+        np.arange(y_min, y_max, mesh_step)
+    )
+    
+    # Make predictions on mesh
+    mesh_points = np.c_[xx.ravel(), yy.ravel()]
+    
+    # Use predict_proba if available, otherwise predict
+    if hasattr(model, 'predict_proba'):
+        Z = model.predict_proba(mesh_points)
+        if Z.ndim > 1 and Z.shape[1] > 1:
+            Z = Z[:, 1]  # Use probability of positive class for binary
+        Z = Z.reshape(xx.shape)
+        
+        # Plot decision boundary with contour
+        contour = ax.contourf(xx, yy, Z, levels=50, alpha=alpha, cmap=plt.cm.RdYlBu)
+        ax.contour(xx, yy, Z, levels=[0.5], colors='black', linestyles='--', linewidths=2)
+    else:
+        Z = model.predict(mesh_points)
+        Z = Z.reshape(xx.shape)
+        ax.contourf(xx, yy, Z, alpha=alpha, cmap=plt.cm.RdYlBu)
+    
+    # Plot data points
+    scatter = ax.scatter(
+        X[:, 0], X[:, 1], c=y,
+        cmap=plt.cm.RdYlBu, edgecolors='black', alpha=0.8
+    )
+    
+    ax.set_title(title)
+    ax.set_xlabel('Feature 1')
+    ax.set_ylabel('Feature 2')
+    
+    plt.tight_layout()
+    return fig
+
+
+def plot_training_history(
+    losses: List[float],
+    title: str = "Training Loss Curve",
+    figsize: Tuple[int, int] = (8, 6),
+    xlabel: str = "Iteration",
+    ylabel: str = "Loss"
+) -> plt.Figure:
+    """Plot training loss curve.
+    
+    Parameters
+    ----------
+    losses : List[float]
+        List of loss values during training
+    title : str, default="Training Loss Curve"
+        Plot title
+    figsize : tuple, default=(8, 6)
+        Figure size
+    xlabel : str, default="Iteration"
+        X-axis label
+    ylabel : str, default="Loss"
+        Y-axis label
+    
+    Returns
+    -------
+    plt.Figure
+        matplotlib Figure object
+    """
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    ax.plot(losses, marker='o', markersize=3, linewidth=2)
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
     return fig

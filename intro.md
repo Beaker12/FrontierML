@@ -22,7 +22,7 @@ This book covers the full spectrum of machine learning:
 - Linear & Logistic Regression
 - Decision Trees & Random Forest
 - Support Vector Machines
-- Neural Networks & Deep Learning
+- Neural Networks & Deep Learning (comprehensive framework comparison)
 - Naive Bayes & K-Nearest Neighbors
 - Boosting Methods (AdaBoost, Gradient Boosting)
 

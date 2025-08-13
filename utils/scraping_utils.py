@@ -4,6 +4,11 @@ Web scraping utilities for FrontierML.
 This module provides helper functions for collecting real-world data from various sources
 including web scraping, API interactions, and data preprocessing.
 
+References:
+    - Lawson, R. (2015). Web scraping with Python. Packt Publishing.
+    - Richardson, L. (2007). Beautiful Soup Documentation. 
+      https://www.crummy.com/software/BeautifulSoup/
+
 Author: FrontierML Team
 Date: 2025-08-12
 """
@@ -29,7 +34,24 @@ class WebScraper:
     A comprehensive web scraping utility class.
     
     This class provides methods for scraping data from websites with proper
-    error handling, rate limiting, and data cleaning capabilities.
+    error handling, rate limiting, and data cleaning capabilities following
+    ethical scraping practices as outlined by Lawson (2015).
+    
+    Parameters
+    ----------
+    delay : float, default=1.0
+        Delay between requests in seconds to be respectful to servers
+    timeout : int, default=30
+        Request timeout in seconds
+        
+    Attributes
+    ----------
+    session : requests.Session
+        HTTP session for maintaining connection state
+        
+    References
+    ----------
+    Lawson, R. (2015). Web scraping with Python. Packt Publishing.
     """
     
     def __init__(self, delay: float = 1.0, timeout: int = 30):
@@ -292,3 +314,161 @@ def load_data(filepath: Union[str, Path]) -> Union[pd.DataFrame, Dict]:
         return pd.read_excel(filepath)
     else:
         raise ValueError(f"Unsupported file format: {filepath.suffix}")
+
+
+def scrape_nfl_wr_stats(year: int, max_players: int = 40) -> Optional[pd.DataFrame]:
+    """
+    Scrape NFL WR statistics for a specific year using WebScraper.
+    
+    Parameters
+    ----------
+    year : int
+        Season year to scrape
+    max_players : int, default=40
+        Maximum number of top WRs to collect
+        
+    Returns
+    -------
+    pd.DataFrame or None
+        DataFrame with WR statistics or None if scraping fails
+        
+    References
+    ----------
+    Data source: Pro Football Reference (https://www.pro-football-reference.com/)
+    """
+    try:
+        # Initialize scraper with respectful delay
+        scraper = WebScraper(delay=2.0, timeout=30)
+        
+        # Pro Football Reference URL for receiving stats
+        url = f"https://www.pro-football-reference.com/years/{year}/receiving.htm"
+        
+        logger.info(f"Scraping {year} WR stats from: {url}")
+        soup = scraper.get_page(url)
+        
+        if soup is None:
+            logger.error(f"Failed to fetch page for {year}")
+            return None
+        
+        # Extract the main receiving stats table
+        stats_table = soup.find('table', {'id': 'receiving'})
+        if stats_table is None:
+            logger.error(f"No receiving stats table found for {year}")
+            return None
+        
+        # Convert table to DataFrame
+        df = pd.read_html(str(stats_table))[0]
+        
+        # Clean up the DataFrame
+        df = df.dropna(subset=['Player'])  # Remove empty rows
+        df = df[df['Player'] != 'Player']  # Remove header rows that repeat
+        
+        # Filter for Wide Receivers
+        if 'Pos' in df.columns:
+            df = df[df['Pos'].str.contains('WR', na=False)]
+        
+        # Rename columns to match our schema
+        column_mapping = {
+            'Player': 'player_name',
+            'Pos': 'position', 
+            'Rec': 'receptions',
+            'Tgt': 'targets',
+            'Yds': 'receiving_yards',
+            'Y/R': 'yards_per_reception',
+            'Lng': 'longest_reception',
+            'TD': 'receiving_tds',
+            '1D': 'first_downs',
+            'Ctch%': 'catch_rate',
+            'Y/Tgt': 'yards_per_target'
+        }
+        
+        # Apply column mapping where columns exist
+        df = df.rename(columns={k: v for k, v in column_mapping.items() if k in df.columns})
+        
+        # Add season column
+        df['season'] = year
+        
+        # Clean numeric columns
+        numeric_cols = ['receptions', 'targets', 'receiving_yards', 'yards_per_reception',
+                       'longest_reception', 'receiving_tds', 'first_downs', 'catch_rate', 
+                       'yards_per_target']
+        
+        df = clean_numeric_data(df, numeric_cols)
+        
+        # Calculate additional performance metrics
+        df['performance_score'] = (
+            df['receiving_yards'] * 0.02 + 
+            df['receiving_tds'] * 6 + 
+            df['receptions'] * 0.5
+        )
+        
+        df['receptions_per_game'] = df['receptions'] / 17  # NFL season length
+        df['yards_per_game'] = df['receiving_yards'] / 17
+        
+        # Binary features for neural network analysis
+        df['high_volume'] = (df['receptions'] > 80).astype(int)
+        df['big_play_threat'] = (df['longest_reception'] > 40).astype(int) 
+        df['red_zone_threat'] = (df['receiving_tds'] > 6).astype(int)
+        df['elite_efficiency'] = (df['yards_per_reception'] > 15).astype(int)
+        
+        # Filter out rows with insufficient data
+        df = df.dropna(subset=['receptions', 'receiving_yards'])
+        df = df[df['receptions'] > 0]  # Must have at least 1 reception
+        
+        # Sort by performance and take top players
+        df = df.sort_values('performance_score', ascending=False).head(max_players)
+        
+        logger.info(f"Successfully scraped {len(df)} WR players for {year}")
+        return df
+        
+    except Exception as e:
+        logger.error(f"Failed to scrape data for {year}: {e}")
+        return None
+
+
+def scrape_multi_year_nfl_data(start_year: int = 2019, num_years: int = 5, 
+                              players_per_year: int = 40) -> Optional[pd.DataFrame]:
+    """
+    Scrape NFL WR data across multiple years using WebScraper.
+    
+    Parameters
+    ----------
+    start_year : int, default=2019
+        Starting year for scraping
+    num_years : int, default=5
+        Number of years to scrape
+    players_per_year : int, default=40
+        Target number of players per year
+        
+    Returns
+    -------
+    pd.DataFrame or None
+        Combined DataFrame with all years or None if scraping fails
+        
+    References
+    ----------
+    Data source: Pro Football Reference (https://www.pro-football-reference.com/)
+    """
+    all_data = []
+    years = list(range(start_year, start_year + num_years))
+    
+    for year in years:
+        logger.info(f"Scraping data for {year}...")
+        year_data = scrape_nfl_wr_stats(year, players_per_year)
+        
+        if year_data is not None and not year_data.empty:
+            all_data.append(year_data)
+            logger.info(f"Collected {len(year_data)} players for {year}")
+        else:
+            logger.warning(f"Failed to get data for {year}")
+        
+        # Be respectful to the server between years
+        time.sleep(3)
+    
+    if all_data:
+        combined_df = pd.concat(all_data, ignore_index=True)
+        logger.info(f"Total players scraped: {len(combined_df)} across {len(years)} seasons")
+        return combined_df
+    else:
+        logger.error("No data could be scraped from any year")
+        return None

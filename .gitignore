@@ -126,7 +126,12 @@ dmypy.json
 .pyre/
 
 # Data files and datasets
-data/
+data/external
+data/features
+data/processed
+data/raw
+data/samples
+data/scraped
 *.csv
 *.json
 *.xlsx
