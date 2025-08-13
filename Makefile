@@ -1,7 +1,10 @@
 .PHONY: install clean test jupyter build book serve
 
 install:
-	pip install -r requirements.txt
+	python3 -m venv .venv
+	.venv/bin/pip install -r requirements.txt
+	.venv/bin/pip install -r requirements.txt
+	source .venv/bin/activate
 
 clean:
 	find . -type f -name "*.pyc" -delete
