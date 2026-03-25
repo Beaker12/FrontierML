@@ -23,6 +23,7 @@ import logging
 from urllib.parse import urljoin, urlparse
 import json
 from pathlib import Path
+import io
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -472,3 +473,200 @@ def scrape_multi_year_nfl_data(start_year: int = 2019, num_years: int = 5,
     else:
         logger.error("No data could be scraped from any year")
         return None
+
+
+def download_nyc_taxi_data(year: int = 2024, month: int = 1, 
+                          taxi_type: str = 'yellow', 
+                          sample_size: Optional[int] = 10000,
+                          save_path: Optional[str] = None) -> pd.DataFrame:
+    """
+    Download NYC TLC taxi trip record data from the official dataset.
+    
+    This function downloads parquet files from the NYC Taxi and Limousine Commission
+    public dataset hosted on AWS S3. Data includes pickup/dropoff locations,
+    timestamps, fares, and trip details.
+    
+    Parameters
+    ----------
+    year : int, default=2024
+        Year of taxi data to download (2009-2025)
+    month : int, default=1
+        Month of taxi data to download (1-12)
+    taxi_type : str, default='yellow'
+        Type of taxi data ('yellow', 'green', 'fhv', 'fhvhv')
+    sample_size : int or None, default=10000
+        Number of random samples to return. If None, returns full dataset
+    save_path : str or None, default=None
+        Path to save the downloaded data. If None, saves to data/raw/
+        
+    Returns
+    -------
+    pd.DataFrame
+        Taxi trip data with columns including pickup/dropoff locations,
+        timestamps, passenger count, trip distance, and fare information
+        
+    References
+    ----------
+    NYC Taxi and Limousine Commission (TLC) Trip Record Data was accessed
+    from https://registry.opendata.aws/nyc-tlc-trip-records-pds/
+    
+    Notes
+    -----
+    Data schema varies slightly by year and taxi type. Function handles
+    common column standardization for clustering analysis.
+    """
+    # Construct URL for NYC TLC data
+    month_str = f"{month:02d}"
+    filename = f"{taxi_type}_tripdata_{year}-{month_str}.parquet"
+    base_url = "https://d37ci6vzurychx.cloudfront.net/trip-data/"
+    url = base_url + filename
+    
+    logger.info(f"Downloading {taxi_type} taxi data for {year}-{month_str}")
+    logger.info(f"URL: {url}")
+    
+    try:
+        # Download parquet file directly into pandas
+        response = requests.get(url, timeout=300)
+        response.raise_for_status()
+        
+        # Try to read parquet data from bytes
+        try:
+            df = pd.read_parquet(io.BytesIO(response.content))
+        except Exception as parquet_error:
+            logger.warning(f"Parquet reading failed: {parquet_error}")
+            # Fallback: save to temp file and read
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix='.parquet', delete=False) as tmp_file:
+                tmp_file.write(response.content)
+                tmp_file.flush()
+                df = pd.read_parquet(tmp_file.name)
+                
+        logger.info(f"Successfully downloaded {len(df):,} trip records")
+        
+        # Standardize column names for clustering analysis
+        df = _standardize_taxi_columns(df, taxi_type)
+        
+        # Sample data if requested
+        if sample_size is not None and len(df) > sample_size:
+            df = df.sample(n=sample_size, random_state=42).reset_index(drop=True)
+            logger.info(f"Sampled {sample_size:,} records for analysis")
+        
+        # Save to file if path provided
+        if save_path is None:
+            save_path = f"../data/raw/nyc_taxi_{taxi_type}_{year}_{month:02d}.csv"
+        
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        if save_path.endswith('.parquet'):
+            df.to_parquet(save_path)
+        else:
+            df.to_csv(save_path, index=False)
+        logger.info(f"Data saved to {save_path}")
+        
+        return df
+        
+    except requests.RequestException as e:
+        logger.error(f"Failed to download data: {e}")
+        raise
+    except Exception as e:
+        logger.error(f"Error processing data: {e}")
+        raise
+
+
+def _standardize_taxi_columns(df: pd.DataFrame, taxi_type: str) -> pd.DataFrame:
+    """
+    Standardize column names across different taxi data schemas.
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Raw taxi data
+    taxi_type : str
+        Type of taxi data for schema detection
+        
+    Returns
+    -------
+    pd.DataFrame
+        Data with standardized column names for clustering analysis
+    """
+    # Create column mapping for different schemas
+    column_mappings = {
+        'yellow': {
+            'tpep_pickup_datetime': 'pickup_datetime',
+            'tpep_dropoff_datetime': 'dropoff_datetime',
+            'pickup_longitude': 'pickup_longitude',
+            'pickup_latitude': 'pickup_latitude', 
+            'dropoff_longitude': 'dropoff_longitude',
+            'dropoff_latitude': 'dropoff_latitude',
+            'PULocationID': 'pickup_location_id',
+            'DOLocationID': 'dropoff_location_id'
+        },
+        'green': {
+            'lpep_pickup_datetime': 'pickup_datetime',
+            'lpep_dropoff_datetime': 'dropoff_datetime',
+            'pickup_longitude': 'pickup_longitude',
+            'pickup_latitude': 'pickup_latitude',
+            'dropoff_longitude': 'dropoff_longitude', 
+            'dropoff_latitude': 'dropoff_latitude',
+            'PULocationID': 'pickup_location_id',
+            'DOLocationID': 'dropoff_location_id'
+        }
+    }
+    
+    # Apply column mapping if available
+    if taxi_type in column_mappings:
+        mapping = column_mappings[taxi_type]
+        existing_cols = {old: new for old, new in mapping.items() if old in df.columns}
+        df = df.rename(columns=existing_cols)
+    
+    # Filter to essential columns for clustering
+    essential_cols = []
+    for col in ['pickup_datetime', 'dropoff_datetime', 
+                'pickup_latitude', 'pickup_longitude',
+                'dropoff_latitude', 'dropoff_longitude',
+                'pickup_location_id', 'dropoff_location_id',
+                'passenger_count', 'trip_distance', 'total_amount']:
+        if col in df.columns:
+            essential_cols.append(col)
+    
+    if essential_cols:
+        df = df[essential_cols].copy()
+    
+    # Clean coordinate data
+    if 'pickup_latitude' in df.columns and 'pickup_longitude' in df.columns:
+        # Remove invalid coordinates (NYC bounds approximately)
+        valid_coords = (
+            (df['pickup_latitude'].between(40.4, 41.0)) & 
+            (df['pickup_longitude'].between(-74.5, -73.5)) &
+            (df['dropoff_latitude'].between(40.4, 41.0)) & 
+            (df['dropoff_longitude'].between(-74.5, -73.5))
+        )
+        df = df[valid_coords].copy()
+        logger.info(f"Filtered to {len(df):,} records with valid NYC coordinates")
+    
+    return df
+
+
+def get_taxi_zone_data() -> pd.DataFrame:
+    """
+    Download NYC taxi zone lookup table for location mapping.
+    
+    Returns
+    -------
+    pd.DataFrame
+        Taxi zone lookup data with zone IDs, names, and borough information
+        
+    References
+    ----------
+    NYC Taxi Zone Lookup Table from:
+    https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv
+    """
+    url = "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv"
+    
+    try:
+        logger.info("Downloading NYC taxi zone lookup table")
+        df = pd.read_csv(url)
+        logger.info(f"Downloaded {len(df)} taxi zones")
+        return df
+    except Exception as e:
+        logger.error(f"Failed to download taxi zone data: {e}")
+        raise
