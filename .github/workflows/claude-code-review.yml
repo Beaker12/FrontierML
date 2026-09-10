@@ -50,7 +50,26 @@ jobs:
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
           prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
-          claude_args: '--allowedTools "mcp__github_inline_comment__create_inline_comment"'
+          # --allowedTools REPLACES claude-code-action's built-in default tool
+          # set rather than extending it (confirmed 2026-09-10 on Beaker12/Tenet,
+          # commit c7011c8ac: the review ran "success" with permission_denials_count
+          # in the double digits and posted nothing). Two things were missing here:
+          # (1) `Skill` itself — the prompt below invokes /code-review:code-review,
+          #     which issues a `Skill` tool call; without it granted the skill is
+          #     denied outright (non_execution_kind: user-rejected) and nothing
+          #     downstream ever runs. This was the actual root cause of total
+          #     silence, confirmed via show_full_output: true on a throwaway test
+          #     PR (Beaker12/fermion-kids#20) — fixed the skill denial, then a real
+          #     inline comment posted correctly.
+          # (2) Read/Grep/Glob/LS — without them the plugin can see the diff via
+          #     `gh pr diff` but can't inspect surrounding source to verify a
+          #     finding, and declines to post an unverified one.
+          claude_args: >-
+            --allowedTools
+            "Skill,
+            mcp__github_inline_comment__create_inline_comment,
+            Read,Grep,Glob,LS,
+            Bash(gh pr diff:*),Bash(gh pr view:*)"
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
 
