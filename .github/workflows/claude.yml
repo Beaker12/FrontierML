@@ -1,3 +1,16 @@
+# SECURITY (owner decision 2026-10-09): this is a PUBLIC repo and the job runs
+# on a self-hosted home-lab runner (tau-frontierml). Anyone on GitHub can open
+# issues or comment, so the job-level `if:` below runs Claude ONLY when the
+# triggering content (comment / review / issue) was authored by an OWNER,
+# MEMBER or COLLABORATOR, in addition to the existing @claude mention check.
+# Everyone else -> the job is skipped and never reaches the runner.
+# - Do NOT switch to GitHub-hosted runners (owner policy) and do NOT use
+#   pull_request_target.
+# - There are no `run:` steps here, so no ${{ github.event.* }} lands in a
+#   shell. The action reads the comment body as its prompt, which is why the
+#   author must be trusted.
+# - `id-token: write` stays: this workflow does not pass github_token, so
+#   claude-code-action uses the GitHub OIDC -> Claude App token exchange.
 name: Claude Code
 
 on:
@@ -12,11 +25,21 @@ on:
 
 jobs:
   claude:
+    # Trusted authors only (see header). author_association is taken from the
+    # object that carries the @claude text: comment, review, or issue.
     if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+      (github.event_name == 'issue_comment' &&
+        contains(github.event.comment.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review_comment' &&
+        contains(github.event.comment.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review' &&
+        contains(github.event.review.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association)) ||
+      (github.event_name == 'issues' &&
+        (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')) &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association))
     runs-on: tau-frontierml
     permissions:
       contents: read

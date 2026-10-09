@@ -1,3 +1,20 @@
+# SECURITY (owner decision 2026-10-09): this is a PUBLIC repo and the job runs
+# on a self-hosted home-lab runner (tau-frontierml). Fork PRs would otherwise
+# run on that runner, so the job-level `if:` below runs ONLY for PRs whose head
+# branch lives in this repository AND whose author is an OWNER, MEMBER or
+# COLLABORATOR. Fork PRs, Dependabot PRs and outside authors are skipped.
+# - Do NOT switch to GitHub-hosted runners (owner policy) and do NOT use
+#   pull_request_target.
+# - For `pull_request`, GitHub uses the workflow file from the PR's merge ref,
+#   so a fork PR can edit this guard away. This `if:` is only fully effective
+#   together with the repo setting "Require approval for all external
+#   contributors" (Settings > Actions > General).
+# - No `run:` steps; the only interpolation (`prompt:`) uses
+#   github.repository and the numeric PR number, neither of which an
+#   attacker controls.
+# - `id-token: write` was removed: github_token is passed below, so
+#   claude-code-action skips the OIDC exchange. Add it back if github_token
+#   is removed.
 name: Claude Code Review
 
 on:
@@ -12,18 +29,16 @@ on:
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
+    # Trusted, same-repo PRs only (see header).
+    if: |
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
 
     runs-on: tau-frontierml
     permissions:
       contents: read
       pull-requests: write
       issues: read
-      id-token: write
 
     steps:
       - name: Checkout repository
