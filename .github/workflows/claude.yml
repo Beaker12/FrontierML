@@ -3,13 +3,21 @@
 # issues or comment, so the job-level `if:` below runs Claude ONLY when, in
 # addition to the existing @claude mention check, BOTH of these are an OWNER,
 # MEMBER or COLLABORATOR:
-#   * the author of the triggering content (comment / review / issue), AND
+#   * the author of the triggering content (comment / issue), AND
 #   * the author of the issue or PR Claude will read (title, body, diff and
 #     files are prompt input and can carry prompt injection).
-# PR review events also require the PR head to live in this repo, because
-# claude-code-action checks out the PR head on this runner. The `issues`
-# event also requires a human sender (github.event.sender.type == 'User').
+# The `issues` event also requires a human sender
+# (github.event.sender.type == 'User').
 # Everyone else -> the job is skipped and never reaches the runner.
+# - Only `issue_comment` and `issues` are used. Both always run the workflow
+#   file from the DEFAULT branch, so the guard cannot be edited by a PR.
+#   `issue_comment` also covers PR conversation comments.
+# - pull_request_review / pull_request_review_comment are intentionally NOT
+#   used: they run the workflow from the PR's merge ref, so a fork PR could
+#   edit this guard away and still reach the self-hosted runner.
+# - include_comments_by_actor limits the issue/PR comments, reviews and review
+#   comments fed into Claude's prompt to the owner's. Otherwise an outsider's
+#   comment on a trusted thread becomes prompt input (prompt injection).
 # - Do NOT switch to GitHub-hosted runners (owner policy) and do NOT use
 #   pull_request_target.
 # - There are no `run:` steps here, so no ${{ github.event.* }} lands in a
@@ -23,17 +31,13 @@ name: Claude Code
 on:
   issue_comment:
     types: [created]
-  pull_request_review_comment:
-    types: [created]
   issues:
     types: [opened, assigned]
-  pull_request_review:
-    types: [submitted]
 
 jobs:
   claude:
-    # Trusted authors only (see header): the author of the comment / review /
-    # issue that carries @claude AND the author of the issue / PR it is on.
+    # Trusted authors only (see header): the author of the comment / issue
+    # that carries @claude AND the author of the issue / PR it is on.
     # issue_comment covers both issues and PRs (github.event.issue is the PR
     # for PR conversation comments).
     if: |
@@ -41,16 +45,6 @@ jobs:
         contains(github.event.comment.body, '@claude') &&
         contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
         contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)) ||
-      (github.event_name == 'pull_request_review_comment' &&
-        contains(github.event.comment.body, '@claude') &&
-        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
-        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) &&
-        github.event.pull_request.head.repo.full_name == github.repository) ||
-      (github.event_name == 'pull_request_review' &&
-        contains(github.event.review.body, '@claude') &&
-        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association) &&
-        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) &&
-        github.event.pull_request.head.repo.full_name == github.repository) ||
       (github.event_name == 'issues' &&
         (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')) &&
         contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association) &&
@@ -73,6 +67,11 @@ jobs:
         uses: anthropics/claude-code-action@2dca132ff0e0c4094ce6048b422c6915a071210b # v1.0.247
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          # Only the owner's comments/reviews on the thread reach the prompt
+          # (see header). Applies to issue/PR comments, reviews and inline
+          # review comments in claude-code-action's context fetcher.
+          include_comments_by_actor: 'Beaker12'
 
           # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |

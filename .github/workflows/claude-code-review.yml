@@ -9,9 +9,22 @@
 # - Do NOT switch to GitHub-hosted runners (owner policy) and do NOT use
 #   pull_request_target.
 # - For `pull_request`, GitHub uses the workflow file from the PR's merge ref,
-#   so a fork PR can edit this guard away. This `if:` is only fully effective
-#   together with the repo setting "Require approval for all external
-#   contributors" (Settings > Actions > General).
+#   so a fork PR can edit this `if:` away. The `if:` is defence in depth only.
+#   The ACTUAL barrier against fork PRs reaching the runner is the repo
+#   setting "Require approval for all external contributors"
+#   (Settings > Actions > General > fork pull request workflows). The
+#   coordinator reports the owner enabled it 2026-10-09. Never disable it
+#   while this workflow targets a self-hosted runner.
+# - `gh pr view` / `gh issue view` are DENIED: they can print PR comments
+#   (outsider prompt injection). claude-code-action splits --allowedTools on
+#   every comma, so a `--json title,body,files`-only rule cannot be
+#   expressed. They are put in --disallowedTools, not just left out of
+#   --allowedTools, because the code-review plugin's command frontmatter
+#   grants both itself, and deny rules take precedence. The plugin reads the
+#   change via `gh pr diff` and the checked-out files.
+# - plugin_marketplaces is NOT pinned: at the pinned claude-code-action, a
+#   marketplace URL must end in `.git` (no #ref/@sha form). The marketplace
+#   therefore tracks anthropics/claude-code's default branch.
 # - No `run:` steps; the only interpolation (`prompt:`) uses
 #   github.repository and the numeric PR number, neither of which an
 #   attacker controls.
@@ -88,7 +101,9 @@ jobs:
             "Skill,
             mcp__github_inline_comment__create_inline_comment,
             Read,Grep,Glob,LS,
-            Bash(gh pr diff:*),Bash(gh pr view:*)"
+            Bash(gh pr diff:*)"
+            --disallowedTools
+            "Bash(gh pr view:*),Bash(gh issue view:*)"
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
 
