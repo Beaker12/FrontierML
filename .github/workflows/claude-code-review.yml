@@ -2,7 +2,10 @@
 # on a self-hosted home-lab runner (tau-frontierml). Fork PRs would otherwise
 # run on that runner, so the job-level `if:` below runs ONLY for PRs whose head
 # branch lives in this repository AND whose author is an OWNER, MEMBER or
-# COLLABORATOR. Fork PRs, Dependabot PRs and outside authors are skipped.
+# COLLABORATOR AND whose triggering sender is a human (sender.type == 'User').
+# Fork PRs, Dependabot/bot-triggered runs and outside authors are skipped.
+# - Actions are pinned to full commit SHAs (version in a trailing comment).
+#   Re-resolve from the official tag when bumping.
 # - Do NOT switch to GitHub-hosted runners (owner policy) and do NOT use
 #   pull_request_target.
 # - For `pull_request`, GitHub uses the workflow file from the PR's merge ref,
@@ -32,7 +35,8 @@ jobs:
     # Trusted, same-repo PRs only (see header).
     if: |
       github.event.pull_request.head.repo.full_name == github.repository &&
-      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) &&
+      github.event.sender.type == 'User'
 
     runs-on: tau-frontierml
     permissions:
@@ -42,13 +46,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 1
 
       - name: Run Claude Code Review
         id: claude-review
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@2dca132ff0e0c4094ce6048b422c6915a071210b # v1.0.247
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # Bypass claude-code-action's internal GitHub-OIDC -> App-token

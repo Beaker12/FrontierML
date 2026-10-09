@@ -1,14 +1,21 @@
 # SECURITY (owner decision 2026-10-09): this is a PUBLIC repo and the job runs
 # on a self-hosted home-lab runner (tau-frontierml). Anyone on GitHub can open
-# issues or comment, so the job-level `if:` below runs Claude ONLY when the
-# triggering content (comment / review / issue) was authored by an OWNER,
-# MEMBER or COLLABORATOR, in addition to the existing @claude mention check.
+# issues or comment, so the job-level `if:` below runs Claude ONLY when, in
+# addition to the existing @claude mention check, BOTH of these are an OWNER,
+# MEMBER or COLLABORATOR:
+#   * the author of the triggering content (comment / review / issue), AND
+#   * the author of the issue or PR Claude will read (title, body, diff and
+#     files are prompt input and can carry prompt injection).
+# PR review events also require the PR head to live in this repo, because
+# claude-code-action checks out the PR head on this runner. The `issues`
+# event also requires a human sender (github.event.sender.type == 'User').
 # Everyone else -> the job is skipped and never reaches the runner.
 # - Do NOT switch to GitHub-hosted runners (owner policy) and do NOT use
 #   pull_request_target.
 # - There are no `run:` steps here, so no ${{ github.event.* }} lands in a
-#   shell. The action reads the comment body as its prompt, which is why the
-#   author must be trusted.
+#   shell.
+# - Actions are pinned to full commit SHAs (version in a trailing comment).
+#   Re-resolve from the official tag when bumping.
 # - `id-token: write` stays: this workflow does not pass github_token, so
 #   claude-code-action uses the GitHub OIDC -> Claude App token exchange.
 name: Claude Code
@@ -25,21 +32,29 @@ on:
 
 jobs:
   claude:
-    # Trusted authors only (see header). author_association is taken from the
-    # object that carries the @claude text: comment, review, or issue.
+    # Trusted authors only (see header): the author of the comment / review /
+    # issue that carries @claude AND the author of the issue / PR it is on.
+    # issue_comment covers both issues and PRs (github.event.issue is the PR
+    # for PR conversation comments).
     if: |
       (github.event_name == 'issue_comment' &&
         contains(github.event.comment.body, '@claude') &&
-        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)) ||
       (github.event_name == 'pull_request_review_comment' &&
         contains(github.event.comment.body, '@claude') &&
-        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) &&
+        github.event.pull_request.head.repo.full_name == github.repository) ||
       (github.event_name == 'pull_request_review' &&
         contains(github.event.review.body, '@claude') &&
-        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association)) ||
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association) &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) &&
+        github.event.pull_request.head.repo.full_name == github.repository) ||
       (github.event_name == 'issues' &&
         (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')) &&
-        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association))
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association) &&
+        github.event.sender.type == 'User')
     runs-on: tau-frontierml
     permissions:
       contents: read
@@ -49,13 +64,13 @@ jobs:
       actions: read # Required for Claude to read CI results on PRs
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 1
 
       - name: Run Claude Code
         id: claude
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@2dca132ff0e0c4094ce6048b422c6915a071210b # v1.0.247
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
