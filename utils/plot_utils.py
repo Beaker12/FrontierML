@@ -21,12 +21,9 @@ import numpy as np
 import pandas as pd
 from typing import Optional, List, Tuple, Union
 import logging
-import warnings
+from matplotlib import font_manager
 
 logger = logging.getLogger(__name__)
-
-# Suppress matplotlib warnings for cleaner output
-warnings.filterwarnings('ignore', category=UserWarning)
 
 
 def configure_plotting(style: str = 'default', 
@@ -144,24 +141,18 @@ def configure_plotting(style: str = 'default',
         'legend.facecolor': 'white'
     })
     
-    # Try to configure Computer Modern fonts with fallbacks
-    try:
-        plt.rcParams.update({
-            'font.family': 'serif',
-            'font.serif': ['Computer Modern', 'Times New Roman', 'DejaVu Serif'],
-            'mathtext.fontset': 'cm',
-            'mathtext.rm': 'serif',
-            'mathtext.it': 'serif:italic',
-            'mathtext.bf': 'serif:bold',
-        })
-        logger.info("Computer Modern fonts configured successfully")
-    except Exception as e:
-        logger.warning(f"Could not configure Computer Modern fonts: {e}")
-        # Fallback to best available serif fonts
-        plt.rcParams.update({
-            'font.family': 'serif',
-            'mathtext.fontset': 'dejavuserif',
-        })
+    # Prefer Computer Modern-like serif fonts, but only request fonts that are
+    # installed; asking for missing families makes matplotlib log a
+    # "findfont" warning for every figure.
+    installed = {f.name for f in font_manager.fontManager.ttflist}
+    preferred = ['CMU Serif', 'Computer Modern', 'Times New Roman', 'DejaVu Serif']
+    serif = [name for name in preferred if name in installed] or ['DejaVu Serif']
+    plt.rcParams.update({
+        'font.family': 'serif',
+        'font.serif': serif,
+        'mathtext.fontset': 'cm',
+    })
+    logger.debug("Serif font list: %s", serif)
     
     # Configure seaborn with enhanced styling
     sns.set_palette("husl")
@@ -612,7 +603,9 @@ def plot_decision_boundary(
     title: str = "Decision Boundary",
     figsize: Tuple[int, int] = (8, 6),
     mesh_step: float = 0.02,
-    alpha: float = 0.6
+    alpha: float = 0.6,
+    feature_names: Optional[Tuple[str, str]] = None,
+    ax: Optional[plt.Axes] = None,
 ) -> plt.Figure:
     """Plot decision boundary for 2D classification problems.
     
@@ -632,6 +625,11 @@ def plot_decision_boundary(
         Step size for mesh grid
     alpha : float, default=0.6
         Transparency for decision boundary
+    feature_names : tuple of two str, optional
+        Axis labels. Defaults to "Feature 1" / "Feature 2" for backward
+        compatibility; pass real names for publication figures.
+    ax : matplotlib Axes, optional
+        Axes to draw on. A new figure is created when omitted.
     
     Returns
     -------
@@ -646,7 +644,11 @@ def plot_decision_boundary(
     if X.shape[1] != 2:
         raise ValueError("Decision boundary plotting requires 2D feature space")
     
-    fig, ax = plt.subplots(figsize=figsize)
+    own_figure = ax is None
+    if own_figure:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.figure
     
     # Create mesh for decision boundary
     x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
@@ -681,10 +683,12 @@ def plot_decision_boundary(
     )
     
     ax.set_title(title)
-    ax.set_xlabel('Feature 1')
-    ax.set_ylabel('Feature 2')
+    xlabel, ylabel = feature_names if feature_names is not None else ('Feature 1', 'Feature 2')
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
     
-    plt.tight_layout()
+    if own_figure:
+        fig.tight_layout()
     return fig
 
 

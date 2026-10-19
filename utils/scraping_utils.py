@@ -478,9 +478,19 @@ def scrape_multi_year_nfl_data(start_year: int = 2019, num_years: int = 5,
 def download_nyc_taxi_data(year: int = 2024, month: int = 1, 
                           taxi_type: str = 'yellow', 
                           sample_size: Optional[int] = 10000,
-                          save_path: Optional[str] = None) -> pd.DataFrame:
+                          save_path: Optional[str] = None,
+                          data_type: str = 'trips') -> pd.DataFrame:
     """
     Download NYC TLC taxi trip record data from the official dataset.
+
+    ``data_type='zones'`` returns the taxi-zone lookup table (see
+    :func:`get_taxi_zone_data`) instead of trip records; any other value than
+    ``'trips'`` or ``'zones'`` raises ``ValueError``. For cached, provenance-
+    recording access prefer :func:`load_tlc_trip_records`,
+    :func:`load_taxi_zone_lookup` and :func:`load_taxi_zone_geometry`.
+
+    Note that TLC trip files from mid-2016 onwards contain zone IDs
+    (``PULocationID``/``DOLocationID``) rather than latitude/longitude.
     
     This function downloads parquet files from the NYC Taxi and Limousine Commission
     public dataset hosted on AWS S3. Data includes pickup/dropoff locations,
@@ -515,6 +525,11 @@ def download_nyc_taxi_data(year: int = 2024, month: int = 1,
     Data schema varies slightly by year and taxi type. Function handles
     common column standardization for clustering analysis.
     """
+    if data_type == 'zones':
+        return get_taxi_zone_data()
+    if data_type != 'trips':
+        raise ValueError(f"data_type must be 'trips' or 'zones', got {data_type!r}")
+
     # Construct URL for NYC TLC data
     month_str = f"{month:02d}"
     filename = f"{taxi_type}_tripdata_{year}-{month_str}.parquet"
@@ -670,3 +685,328 @@ def get_taxi_zone_data() -> pd.DataFrame:
     except Exception as e:
         logger.error(f"Failed to download taxi zone data: {e}")
         raise
+
+
+# ---------------------------------------------------------------------------
+# Cached, provenance-recording loaders for NYC TLC data (used by Chapter 8).
+#
+# These functions never fall back to synthetic data: any download, parsing or
+# validation problem raises an exception.
+# ---------------------------------------------------------------------------
+
+TLC_TRIP_BASE_URL = "https://d37ci6vzurychx.cloudfront.net/trip-data/"
+TLC_ZONE_LOOKUP_URL = "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv"
+TLC_ZONE_SHAPEFILE_URL = "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zones.zip"
+TLC_TERMS_URL = "https://www.nyc.gov/home/terms-of-use.page"
+TLC_DATA_PAGE_URL = "https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page"
+
+
+def fetch_cached(url: str, cache_dir: Union[str, Path], filename: Optional[str] = None,
+                 timeout: int = 600) -> Path:
+    """
+    Download ``url`` into ``cache_dir`` once and record its provenance.
+
+    The first download writes ``<filename>.provenance.json`` next to the file
+    with the URL, UTC access timestamp, size in bytes and SHA-256. Later calls
+    reuse the cached file and leave the provenance record unchanged, so the
+    recorded access time is the time the bytes were actually obtained.
+
+    Raises
+    ------
+    requests.HTTPError
+        If the server returns an error status.
+    """
+    import hashlib
+    from datetime import datetime, timezone
+
+    cache_dir = Path(cache_dir)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    filename = filename or Path(urlparse(url).path).name
+    if not filename or "/" in filename or filename.startswith("."):
+        raise ValueError(f"Unsafe cache filename derived from {url!r}: {filename!r}")
+    path = cache_dir / filename
+    prov_path = cache_dir / f"{filename}.provenance.json"
+
+    if not (path.exists() and prov_path.exists()):
+        logger.info(f"Downloading {url}")
+        tmp_path = cache_dir / f"{filename}.part"
+        sha = hashlib.sha256()
+        n_bytes = 0
+        with requests.get(url, stream=True, timeout=timeout) as response:
+            response.raise_for_status()
+            with open(tmp_path, "wb") as fh:
+                for chunk in response.iter_content(chunk_size=1 << 20):
+                    fh.write(chunk)
+                    sha.update(chunk)
+                    n_bytes += len(chunk)
+        if n_bytes == 0:
+            tmp_path.unlink()
+            raise IOError(f"Empty response from {url}")
+        tmp_path.replace(path)
+        provenance = {
+            "url": url,
+            "accessed_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "bytes": n_bytes,
+            "sha256": sha.hexdigest(),
+        }
+        prov_path.write_text(json.dumps(provenance, indent=2))
+    return path
+
+
+def read_provenance(path: Union[str, Path]) -> Dict[str, Any]:
+    """Return the provenance record written by :func:`fetch_cached` for ``path``."""
+    path = Path(path)
+    prov_path = path.with_name(f"{path.name}.provenance.json")
+    return json.loads(prov_path.read_text())
+
+
+def load_tlc_trip_records(year: int, month: int, taxi_type: str = "yellow",
+                          cache_dir: Union[str, Path] = "../data/raw/tlc",
+                          columns: Optional[List[str]] = None) -> pd.DataFrame:
+    """
+    Load one monthly TLC trip-record parquet file (cached on first use).
+
+    Parameters
+    ----------
+    year, month : int
+        Month of data, e.g. ``2024, 1`` for ``yellow_tripdata_2024-01.parquet``.
+    taxi_type : str
+        ``'yellow'``, ``'green'``, ``'fhv'`` or ``'fhvhv'``.
+    cache_dir : path
+        Directory for the cached parquet file and its provenance record.
+    columns : list of str, optional
+        Subset of columns to read; a missing column raises an error.
+
+    Returns
+    -------
+    pd.DataFrame
+        Raw trip records, unmodified apart from column selection. The cached
+        file path is stored in ``df.attrs['source_path']``.
+    """
+    if taxi_type not in {"yellow", "green", "fhv", "fhvhv"}:
+        raise ValueError(f"Unknown taxi_type {taxi_type!r}")
+    filename = f"{taxi_type}_tripdata_{year}-{month:02d}.parquet"
+    path = fetch_cached(TLC_TRIP_BASE_URL + filename, cache_dir, filename)
+    df = pd.read_parquet(path, columns=columns)
+    df.attrs["source_path"] = str(path)
+    return df
+
+
+def load_taxi_zone_lookup(cache_dir: Union[str, Path] = "../data/raw/tlc") -> pd.DataFrame:
+    """Load the TLC taxi-zone lookup table (LocationID, Borough, Zone, service_zone)."""
+    path = fetch_cached(TLC_ZONE_LOOKUP_URL, cache_dir)
+    df = pd.read_csv(path)
+    expected = {"LocationID", "Borough", "Zone", "service_zone"}
+    missing = expected - set(df.columns)
+    if missing:
+        raise ValueError(f"Zone lookup is missing columns {sorted(missing)}")
+    df.attrs["source_path"] = str(path)
+    return df
+
+
+def _read_dbf(path: Union[str, Path]) -> pd.DataFrame:
+    """Minimal dBASE III reader for the attribute table of a shapefile."""
+    import struct
+
+    raw = Path(path).read_bytes()
+    n_records, header_len, record_len = struct.unpack("<IHH", raw[4:12])
+    fields = []
+    pos = 32
+    while raw[pos] != 0x0D:
+        desc = raw[pos:pos + 32]
+        name = desc[:11].split(b"\x00", 1)[0].decode("ascii")
+        ftype = chr(desc[11])
+        flen = desc[16]
+        ndec = desc[17]
+        fields.append((name, ftype, flen, ndec))
+        pos += 32
+    rows = []
+    for i in range(n_records):
+        start = header_len + i * record_len
+        rec = raw[start:start + record_len]
+        if rec[:1] == b"*":  # deleted record
+            continue
+        offset = 1
+        row = {}
+        for name, ftype, flen, ndec in fields:
+            text = rec[offset:offset + flen].decode("latin-1").strip()
+            offset += flen
+            if ftype in ("N", "F"):
+                if text == "":
+                    row[name] = np.nan
+                elif ftype == "N" and ndec == 0:
+                    row[name] = int(text)
+                else:
+                    row[name] = float(text)
+            else:
+                row[name] = text
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def _read_shp_polygons(path: Union[str, Path]) -> List[List[np.ndarray]]:
+    """
+    Minimal ESRI shapefile reader for Polygon (type 5) geometries.
+
+    Returns one list of rings (each an ``(m, 2)`` array) per record, in file
+    order. Any other shape type raises ``ValueError``.
+    """
+    import struct
+
+    raw = Path(path).read_bytes()
+    file_code = struct.unpack(">i", raw[0:4])[0]
+    if file_code != 9994:
+        raise ValueError(f"{path} is not a shapefile (file code {file_code})")
+    shape_type = struct.unpack("<i", raw[32:36])[0]
+    if shape_type != 5:
+        raise ValueError(f"Only Polygon shapefiles (type 5) are supported, got {shape_type}")
+    pos = 100
+    shapes = []
+    while pos < len(raw):
+        _, content_words = struct.unpack(">ii", raw[pos:pos + 8])
+        content = raw[pos + 8:pos + 8 + 2 * content_words]
+        pos += 8 + 2 * content_words
+        rec_type = struct.unpack("<i", content[0:4])[0]
+        if rec_type == 0:
+            shapes.append([])
+            continue
+        if rec_type != 5:
+            raise ValueError(f"Unsupported record shape type {rec_type}")
+        n_parts, n_points = struct.unpack("<ii", content[36:44])
+        parts = list(struct.unpack(f"<{n_parts}i", content[44:44 + 4 * n_parts]))
+        pts_start = 44 + 4 * n_parts
+        pts = np.frombuffer(content[pts_start:pts_start + 16 * n_points],
+                            dtype="<f8").reshape(n_points, 2)
+        bounds = parts + [n_points]
+        shapes.append([pts[bounds[j]:bounds[j + 1]].copy() for j in range(n_parts)])
+    return shapes
+
+
+def _ring_area_centroid(ring: np.ndarray) -> tuple:
+    """Signed shoelace area and first moments (area x centroid) of one ring."""
+    x, y = ring[:, 0], ring[:, 1]
+    x1, y1 = np.roll(x, -1), np.roll(y, -1)
+    cross = x * y1 - x1 * y
+    a = cross.sum() / 2.0
+    mx = ((x + x1) * cross).sum() / 6.0
+    my = ((y + y1) * cross).sum() / 6.0
+    return a, mx, my
+
+
+def load_taxi_zone_geometry(cache_dir: Union[str, Path] = "../data/raw/tlc") -> pd.DataFrame:
+    """
+    Load TLC taxi-zone polygons and compute areas and centroids in kilometres.
+
+    The TLC shapefile is in NAD83 / New York Long Island state plane
+    (EPSG:2263, US survey feet), a conformal projection whose scale error over
+    New York City is far below 0.1 %, so Euclidean distances between projected
+    coordinates are good approximations of ground distances. Coordinates are
+    converted to kilometres with the unit factor read from the ``.prj`` file.
+
+    Zones stored as several shapefile records (same ``LocationID``) are merged.
+    The polygon centroid is the area-weighted centroid of all rings (holes
+    subtract). As a parsing sanity check, every record's planar area is
+    compared with the shapefile's legacy ``Shape_Area`` attribute (square
+    degrees, converted at 40.7 N). Shoreline zones have smaller planar areas
+    than the legacy value (which evidently predates clipping to the
+    shoreline), so the check is one-sided: ``ValueError`` is raised unless the
+    median ratio planar/legacy is within 2 % of 1 and no record exceeds its
+    legacy area by 2 % or more. A wrong unit factor or a parsing error would
+    violate both conditions.
+
+    Returns
+    -------
+    pd.DataFrame
+        One row per LocationID with columns ``LocationID``, ``zone``,
+        ``borough``, ``area_km2``, ``x_km``, ``y_km`` and ``rings_km`` (list of
+        ``(m, 2)`` arrays, for plotting).
+    """
+    import re
+    import zipfile
+
+    zip_path = fetch_cached(TLC_ZONE_SHAPEFILE_URL, cache_dir)
+    extract_dir = Path(cache_dir) / "taxi_zones"
+    extract_dir.mkdir(parents=True, exist_ok=True)
+    wanted = {".shp", ".dbf", ".prj"}
+    found = {}
+    with zipfile.ZipFile(zip_path) as zf:
+        for info in zf.infolist():
+            base = Path(info.filename).name
+            suffix = Path(base).suffix.lower()
+            if suffix in wanted and not base.startswith("."):
+                if suffix in found:
+                    raise ValueError(f"Multiple {suffix} files in {zip_path}")
+                target = extract_dir / f"taxi_zones{suffix}"  # never trust archive paths
+                target.write_bytes(zf.read(info))
+                found[suffix] = target
+    if set(found) != wanted:
+        raise ValueError(f"{zip_path} lacks {sorted(wanted - set(found))}")
+
+    prj = found[".prj"].read_text()
+    if "Long_Island" not in prj and "Long Island" not in prj:
+        raise ValueError(f"Unexpected CRS in taxi_zones.prj: {prj[:200]}")
+    units = re.findall(r'UNIT\["([^"]+)",\s*([0-9.]+)\]', prj)
+    linear = [u for u in units if "foot" in u[0].lower() or "feet" in u[0].lower()]
+    if len(linear) != 1:
+        raise ValueError(f"Expected one US-foot linear unit in taxi_zones.prj, found {units}")
+    km_per_unit = float(linear[0][1]) / 1000.0
+
+    attrs = _read_dbf(found[".dbf"])
+    shapes = _read_shp_polygons(found[".shp"])
+    if len(attrs) != len(shapes):
+        raise ValueError(f"{len(attrs)} attribute rows but {len(shapes)} shapes")
+
+    # The legacy Shape_Area attribute is in square degrees (it predates the
+    # reprojection). Converted with local degree lengths at 40.7 N it should
+    # agree with the planar area to within a few per cent; this is a sanity
+    # check on the binary parsing and the unit factor, not a precise test.
+    phi = np.radians(40.7)
+    km2_per_deg2 = ((111.41 * np.cos(phi) - 0.09 * np.cos(3 * phi))     # km per degree longitude
+                    * (111.13 - 0.56 * np.cos(2 * phi)))                # km per degree latitude
+    area_ratios = []
+    records = {}
+    for (_, row), rings in zip(attrs.iterrows(), shapes):
+        loc = int(row["LocationID"])
+        a_tot = mx_tot = my_tot = 0.0
+        for ring in rings:
+            a, mx, my = _ring_area_centroid(ring)
+            a_tot += a
+            mx_tot += mx
+            my_tot += my
+        if "Shape_Area" in attrs.columns and row["Shape_Area"] > 0:
+            area_ratios.append(abs(a_tot) * km_per_unit ** 2
+                               / (row["Shape_Area"] * km2_per_deg2))
+        rec = records.setdefault(loc, {"zone": row["zone"], "borough": row["borough"],
+                                       "a": 0.0, "mx": 0.0, "my": 0.0, "rings": []})
+        rec["a"] += a_tot
+        rec["mx"] += mx_tot
+        rec["my"] += my_tot
+        rec["rings"].extend(rings)
+
+    if len(area_ratios) != len(shapes):
+        raise ValueError("Shape_Area attribute missing; cannot sanity-check geometry parsing")
+    area_ratios = np.asarray(area_ratios)
+    median_ratio = float(np.median(area_ratios))
+    max_ratio = float(area_ratios.max())
+    if not (0.98 < median_ratio < 1.02 and max_ratio < 1.02):
+        raise ValueError(f"Planar areas disagree with Shape_Area: median ratio "
+                         f"{median_ratio:.4f}, max ratio {max_ratio:.4f}")
+
+    out = []
+    for loc, rec in sorted(records.items()):
+        out.append({
+            "LocationID": loc,
+            "zone": rec["zone"],
+            "borough": rec["borough"],
+            "area_km2": abs(rec["a"]) * km_per_unit ** 2,
+            "x_km": rec["mx"] / rec["a"] * km_per_unit,
+            "y_km": rec["my"] / rec["a"] * km_per_unit,
+            "rings_km": [r * km_per_unit for r in rec["rings"]],
+        })
+    df = pd.DataFrame(out)
+    df.attrs["source_path"] = str(zip_path)
+    df.attrs["crs"] = "NAD83 / New York Long Island (ftUS), EPSG:2263"
+    df.attrs["n_shapefile_records"] = len(shapes)
+    df.attrs["area_check_median_ratio"] = median_ratio
+    df.attrs["area_check_max_ratio"] = max_ratio
+    return df

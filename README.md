@@ -3,7 +3,7 @@
 An interactive **Jupyter Book** that teaches machine learning concepts through hands-on implementation with real-world data collection and analysis.
 
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Jupyter Book](https://img.shields.io/badge/Jupyter-Book-orange.svg)](https://jupyterbook.org/)
 
 ## Overview
@@ -95,7 +95,7 @@ FrontierML/
 
 ### **Technical Requirements**
 
-- **Python 3.8+** with pip package manager
+- **Python 3.11+** with pip package manager (the published chapters were executed with Python 3.12; exact versions in `requirements-lock.txt`)
 - **Git** for version control
 - **Jupyter Lab** or **Jupyter Notebook**
 - **8GB+ RAM** recommended for deep learning chapters
