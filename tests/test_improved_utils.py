@@ -2,7 +2,7 @@
 Test suite for improved utility functions.
 
 This module tests the enhanced functionality of the utils modules
-to ensure they meet the COPILOT_RULES requirements.
+to ensure they meet the project's coding standards.
 
 References:
     - pytest documentation: https://docs.pytest.org/
