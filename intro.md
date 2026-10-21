@@ -106,7 +106,7 @@ If you use this book in your research or teaching, please cite it as:
 
 ## License
 
-This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+The text, figures and other content of this book are licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/). The code, meaning the notebooks' code cells and the Python in `utils/` and `tests/`, is licensed under the [MIT License](https://github.com/Beaker12/FrontierML/blob/main/LICENSE). Datasets keep their own licenses, stated in each chapter.
 
 ## Bibliography
 

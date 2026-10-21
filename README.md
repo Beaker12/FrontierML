@@ -2,7 +2,8 @@
 
 An interactive **Jupyter Book** that teaches machine learning concepts through hands-on implementation with real-world data collection and analysis.
 
-[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+[![Content: CC BY-NC-SA 4.0](https://img.shields.io/badge/Content-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE-CONTENT)
+[![Code: MIT](https://img.shields.io/badge/Code-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Jupyter Book](https://img.shields.io/badge/Jupyter-Book-orange.svg)](https://jupyterbook.org/)
 
@@ -341,7 +342,12 @@ If you use this course in your research or teaching, please cite:
 
 ## License
 
-This educational resource is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+FrontierML is dual-licensed:
+
+- **Text, figures and other content** are licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). See [LICENSE-CONTENT](LICENSE-CONTENT).
+- **Code**, meaning the code cells in the notebooks, `utils/` and `tests/`, is licensed under the MIT License. See [LICENSE](LICENSE).
+
+Datasets keep their own licenses, which each chapter states where the data is collected.
 
 ## Acknowledgments
 
