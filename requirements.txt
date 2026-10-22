@@ -64,7 +64,6 @@ isort>=5.10.0
 
 # Additional development tools
 pre-commit>=2.20.0
-jupyter-contrib-nbextensions>=0.5.1
 nbstripout>=0.6.0
 
 # Data validation and polite scraping (Chapter 1), parquet I/O (Chapter 8)
